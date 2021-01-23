@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {LineChart, XAxis, Tooltip, CartesianGrid, Line} from 'recharts';
-import { isTemplateExpression } from 'typescript';
+//import {LineChart, XAxis, Tooltip, CartesianGrid, Line} from 'recharts';
+//import { isTemplateExpression } from 'typescript';
 import api from './services/api';
 
 
@@ -8,6 +8,13 @@ interface ICustomFields {
     id: number;
     name: string;
     value: string;    
+}
+
+interface ItemGroup<T> {
+  [key: string]: T[];
+}
+interface Item<T = any> {
+  [key: string]: T
 }
 
 interface Iissues {
@@ -33,10 +40,13 @@ interface Iissues {
     name: string;
   }
   custom_fields: ICustomFields[];
+
+  tracker_name : string;
+  month: number;
+  year: number;
 }
 
 interface ITotals {
-  day : number;
   month : number;
   year: number;
   quantity: number;
@@ -46,73 +56,97 @@ interface ITotals {
 function App() {
 
    const [issues, setIssues] = useState<Iissues[]>([]);
+
    const [bugIssues, setBugIssues] = useState<ITotals[]>([]);
    const [implementationIssues, setImplementationIssues] = useState<ITotals[]>([]);
   
    async function handleDefineIssues () {
-    await issues.map( item => {
+  } 
 
-          const day = new Date(item.created_on).getDay();
-          const month = new Date(item.created_on).getMonth()+1;
-          const year = new Date(item.created_on).getFullYear();
-         
-          setBugIssues([...bugIssues, ...[{day , month, year, quantity: 2, tracker: item.tracker.name}]]);
-      
-    });
-    console.log(bugIssues);
-   } 
-
-  // function handleGetAllIssues (skip: number): Array<Iissues> [] {
-
-  //   api.get(`issues.json?status_id=*&limit=100&offset=${skip}&created_on=%3E%3C2020-04-01|2020-04-30&key=1927788238b0418601fd837aeabcdd9437042b4c`)
-  //       .then( response => {
-  
-  //         if (response.data.issues.length === 100){
-  //              return  handleGetAllIssues(100);              
-  //         }
-  //         else {
-  //           return response.data.issues;
-  //         }
-
-
-//          console.log(`issues.json?status_id=*&limit=100&offset=${skip}&created_on=%3E%3C2020-04-01|2020-04-30&key=1927788238b0418601fd837aeabcdd9437042b4c`) ;
-
-        //   if (issues.length > 0 ){
-        //   setIssues([...issues, response.data.issues ]);
-        //     console.log('>0')    
-        //     console.log(issues.length);    
-        //   console.log(issues);
-        // } else {
-        //   setIssues(response.data.issues);
-        //   console.log('0')    
-        //   console.log(issues);
-        // }
-
-//        console.log(response.data.issues.length);
-
-  
-  //   });
-  // } 
-  
- 
   async function loadData (skip : number, itens : Iissues[] ): Promise<void> {
-    const response = await api.get(`issues.json?status_id=*&limit=20000&offset=${skip}&created_on=%3E%3C2020-01-01|2020-12-30&key=1927788238b0418601fd837aeabcdd9437042b4c`);        
+    const response = await api.get(`issues.json?status_id=*&limit=100&offset=${skip}&created_on=%3E%3C2020-01-01|2020-12-30&key=1927788238b0418601fd837aeabcdd9437042b4c`);        
     const newArray : Iissues[] = response.data.issues;
 
      setIssues([...itens, ...newArray]);
      
-    if (newArray.length === 5000){
-      loadData(skip+5000,newArray) ;
-    }
+    // if (newArray.length === 100){
+    //   loadData(skip+100,newArray) ;
+    // }
 
   }
 
-  useEffect (  () => {
+   useEffect (  () => {
 
-//          console.log(issues);
+    const newArray : Iissues[] = [];
+
+    issues.map(item => { 
+      
+      const newItem : Iissues = { ...item, 
+        tracker_name : item.tracker.name,
+        month: new Date(item.created_on).getMonth()+1 ,
+        year: new Date(item.created_on).getFullYear() };
+        newArray.push(newItem);
+    });
+
+     const imp = 'Implementação';
+
+     function groupBy<T extends Item>(array: T[], key: keyof T): ItemGroup<T> {
+      return array.reduce<ItemGroup<T>>((map, item) => {
+        const itemKey = item[key]
+        if(map[itemKey]) {
+          map[itemKey].push(item);
+        } else {
+          map[itemKey] = [item]
+        }
+    
+        return map
+      }, {})
+    }
+    const groupTracker = groupBy(newArray, "tracker_name" );
+    groupTracker.map(item=> (console.log(item)));
 
 
-},[issues]); 
+    // const implementationQuantity = issues.reduce(function (total, item) {
+    //   if (item.tracker.name === imp) {
+    //     total++;
+    //   }
+    //   else {
+    //     total;
+    //   }
+    //   return total;
+    // }, {});
+    
+//    console.log(implementationQuantity);
+
+//     issues.map( item => {
+
+// //      const day = new Date(item.created_on).getDay();
+//       const month = new Date(item.created_on).getMonth()+1;
+//       const year = new Date(item.created_on).getFullYear();
+
+
+//       const implementationQuantity = issues.reduce(
+//         (acumulador , valorAtual) =>  valorAtual.tracker.name === 'Implementação' ? acumulador++ : acumulador
+//         , 0
+//       );
+//       console.log(implementationQuantity);
+
+//       const bugQuantity = issues.reduce(
+//         (acumulador , valorAtual) =>  valorAtual.tracker.name === 'Correção de Bug' ? acumulador++ : acumulador
+//         , 0
+//       );
+//       console.log(bugQuantity);
+
+//      if (item.tracker.name === 'Implementação') {
+//       setImplementationIssues([ ...[{month, year, quantity: implementationQuantity , tracker: item.tracker.name}]]);
+
+//       } else if (item.tracker.name === 'Correção de Bug') {
+//         setBugIssues([ ...[{ month, year, quantity: bugQuantity, tracker: item.tracker.name}]]);
+//       }
+//     })
+
+
+ },[issues]); 
 
   return (
     <div>
