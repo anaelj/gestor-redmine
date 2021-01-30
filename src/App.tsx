@@ -56,6 +56,9 @@ interface Iissues {
     id: number;
     name: string;
   }
+
+  origemAtendimento : string| undefined;
+
   custom_fields: ICustomFields[];
 
   tracker_name : string;
@@ -84,18 +87,25 @@ function App() {
 
    useEffect (  () => {
 
+    function getCustomFieldValue (name: string, custonfields: ICustomFields[]) {
+      return custonfields.find( item => {return item.name === name ? item.value : ''} )
+    }
+
     const newArray : Iissues[] = [];
 
     issues.map(item => { 
       
       const newItem : Iissues = { ...item, 
         tracker_name : item.tracker.name,
-        monthAndYear: new Date(item.created_on).getMonth()+1 +'/'+new Date(item.created_on).getFullYear()
+        monthAndYear: new Date(item.created_on).getMonth()+1 +'/'+new Date(item.created_on).getFullYear(),
+        origemAtendimento: getCustomFieldValue('Origem',item.custom_fields)?.value
        };
 
         newArray.push(newItem);
          
     });
+
+    
 
      const implementacao = 'Implementação';
      const correcaoBug = 'Correção de Bug';
@@ -118,6 +128,8 @@ function App() {
      const arrayDataMonthImpBug : IDataChartBugImplementacao[] = [];
      const arrayDataBugInternoCliente : IDataChartBugInternoCliente[] = [];
 
+//    console.log(newArray);
+
      const groupMonth = groupBy(newArray, "monthAndYear" );
 
      const keys = Object.keys( groupMonth );
@@ -125,21 +137,26 @@ function App() {
      keys.map(itemKey => {
        arrayDataMonth.push({descricao: itemKey , quantidade: groupMonth[itemKey].length }); 
        const groupTracker = groupBy(groupMonth[itemKey], "tracker_name" );
-
        const agrupamentoPorTipoDeAtemdimento = Object.keys( groupTracker );
-
-       console.log(agrupamentoPorTipoDeAtemdimento);
 
        agrupamentoPorTipoDeAtemdimento.map(itemTipoAtendimento => { 
 
-         if (itemTipoAtendimento === implementacao){
+        if (itemTipoAtendimento === implementacao){
           updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento, qtImplementacao: groupTracker[itemTipoAtendimento].length }); 
         } else if (itemTipoAtendimento === correcaoBug){
           updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento , qtBug: groupTracker[itemTipoAtendimento].length }); 
         } else if (itemTipoAtendimento === duvidaUsuario){
           updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento , qtDuvida: groupTracker[itemTipoAtendimento].length }); 
-         } 
+        } 
        })
+
+
+      const groupOrigemAtendimento = groupBy(groupMonth[itemKey], "origemAtendimento" );
+      const agrupamentoOrigemAtendimento = Object.keys( groupOrigemAtendimento );
+
+      console.log(agrupamentoOrigemAtendimento);
+
+
      })
 
      function updateOrInsertIntoArray(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { // (1)
