@@ -12,6 +12,13 @@ interface IDataChartBugImplementacao {
   mes: string ;
   qtImplementacao?: number;
   qtBug?: number;
+  qtDuvida?: number;
+}
+
+interface IDataChartBugInternoCliente {
+  mes: string ;
+  qtInterno?: number;
+  qtCliente?: number;
 }
 
 interface ICustomFields {
@@ -61,12 +68,7 @@ function App() {
    const [issues, setIssues] = useState<Iissues[]>([]);
    const [dataChart, setDataChart] = useState<IDataChart[]>([]);
    const [dataChartBugImp, setDataChartBugImp] = useState<IDataChartBugImplementacao[]>([]);
-
-  //  const [bugIssues, setBugIssues] = useState<ITotals[]>([]);
-  //  const [implementationIssues, setImplementationIssues] = useState<ITotals[]>([]);
-  
-   async function handleDefineIssues () {
-  } 
+   const [dataChartBugInternoCliente, setDataChartBugInternoCliente] = useState<IDataChartBugInternoCliente[]>([]);
 
   async function loadData (skip : number, itens : Iissues[] ): Promise<void> {
     const response = await api.get(`issues.json?status_id=*&limit=600&offset=${skip}&key=1927788238b0418601fd837aeabcdd9437042b4c`);        //&created_on=%3E%3C2020-01-01|2020-12-30
@@ -96,8 +98,8 @@ function App() {
     });
 
      const implementacao = 'Implementação';
-      const correcaoBug = 'Correção de Bug';
-    //  const duvidaUsuario = 'Dúvida de Usuário';
+     const correcaoBug = 'Correção de Bug';
+     const duvidaUsuario = 'Dúvida de Usuário';
 
      function groupBy<T extends Item>(array: T[], key: keyof T): ItemGroup<T> {
       return array.reduce<ItemGroup<T>>((map, item) => {
@@ -114,6 +116,7 @@ function App() {
 
      const arrayDataMonth : IDataChart[] = [];
      const arrayDataMonthImpBug : IDataChartBugImplementacao[] = [];
+     const arrayDataBugInternoCliente : IDataChartBugInternoCliente[] = [];
 
      const groupMonth = groupBy(newArray, "monthAndYear" );
 
@@ -123,30 +126,31 @@ function App() {
        arrayDataMonth.push({descricao: itemKey , quantidade: groupMonth[itemKey].length }); 
        const groupTracker = groupBy(groupMonth[itemKey], "tracker_name" );
 
-       const keys2 = Object.keys( groupTracker );
-       keys2.map(itemKey2 => { 
-         if (itemKey2 === implementacao){
-          upsert( arrayDataMonthImpBug, {mes: itemKey+'-'+itemKey2, qtImplementacao: groupTracker[itemKey2].length }); 
-        } else if (itemKey2 === correcaoBug){
-          upsert( arrayDataMonthImpBug, {mes: itemKey+'-'+itemKey2 , qtBug: groupTracker[itemKey2].length }); 
+       const agrupamentoPorTipoDeAtemdimento = Object.keys( groupTracker );
+
+       console.log(agrupamentoPorTipoDeAtemdimento);
+
+       agrupamentoPorTipoDeAtemdimento.map(itemTipoAtendimento => { 
+
+         if (itemTipoAtendimento === implementacao){
+          updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento, qtImplementacao: groupTracker[itemTipoAtendimento].length }); 
+        } else if (itemTipoAtendimento === correcaoBug){
+          updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento , qtBug: groupTracker[itemTipoAtendimento].length }); 
+        } else if (itemTipoAtendimento === duvidaUsuario){
+          updateOrInsertIntoArray( arrayDataMonthImpBug, {mes: itemKey+'-'+itemTipoAtendimento , qtDuvida: groupTracker[itemTipoAtendimento].length }); 
          } 
        })
-
-  
      })
-     setDataChart(arrayDataMonth);
-     setDataChartBugImp(arrayDataMonthImpBug);
-//     console.log(arrayDataMonth);
 
-     function upsert(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { // (1)
+     function updateOrInsertIntoArray(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { // (1)
       const i = array.findIndex(_item => _item.mes === item.mes);
       if (i > -1) {
         if (item.qtBug) {
-          array[i] = {mes: item.mes, qtBug: array[i].qtBug, qtImplementacao: item.qtImplementacao};
-          console.log(array[i]);
+          array[i] = {mes: item.mes, qtBug: array[i].qtBug, qtDuvida: array[i].qtDuvida, qtImplementacao: item.qtImplementacao};
         } else if (item.qtImplementacao){
-          array[i] = {mes: item.mes, qtBug: item.qtBug, qtImplementacao: array[i].qtImplementacao};
-          console.log(array[i]);
+          array[i] = {mes: item.mes, qtBug: item.qtBug, qtDuvida: array[i].qtDuvida, qtImplementacao: array[i].qtImplementacao};
+        } else if (item.qtDuvida){
+          array[i] = {mes: item.mes, qtBug: array[i].qtBug, qtDuvida: item.qtDuvida,  qtImplementacao: array[i].qtImplementacao};
         }
         
       } // (2)
@@ -154,6 +158,13 @@ function App() {
         array.push(item);
       }
     }
+
+    setDataChart(arrayDataMonth);
+    setDataChartBugImp(arrayDataMonthImpBug);
+//     setDataChartBugImp(arrayDataBugInternoCliente);
+
+     //     console.log(arrayDataMonth);
+
 
 
 //     const groupTracker = groupBy(newArray, "tracker_name" );
@@ -208,51 +219,32 @@ function App() {
 
   return (
     <div>
+    <h2>
+      {' '}
+      <button onClick={() => loadData(0, [])}>Click me</button>
+    </h2>
 
-        <BarChart width={1024} height={400} data={dataChart}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="descricao" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="quantidade" fill="#8884d8" />
-        </BarChart>
+    <BarChart width={600} height={300} data={dataChart}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="descricao" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="quantidade" fill="#8884d8" />
+    </BarChart>
 
+    <BarChart width={600} height={300} data={dataChartBugImp}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="mes" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="qtImplementacao" fill="#0b8d2d " />
+      <Bar dataKey="qtBug" fill="#e62200 " />
+      <Bar dataKey="qtDuvida" fill="#4750d1 " />
+    </BarChart>
+  </div>
 
-        <BarChart width={1024} height={400} data={dataChartBugImp}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="mes" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="qtImplementacao" fill="#0b8d2d " />
-          <Bar dataKey="qtBug" fill="#d54f32 " />
-        </BarChart>
-
-
-       <h2> <button onClick={() => { handleDefineIssues();  }}>Click me 2</button></h2>
-
-
-
-
-        <h1>Teste - Consulta Redmine</h1>
-        <h2> <button onClick={() => loadData(0,[])}>Click me</button></h2>
-          <div>
-            { 
-               issues.map( item => (
-                  <div key={item.id}>
-                    <label>{issues.length}</label>
-                    <label>  {item.id} </label>
-                    <label>  {item.project.name}'-'{item.created_on}'-'{item.subject} </label>
-                     {item.custom_fields.map( custonFieldItem => ( custonFieldItem.name === 'Origem' ? custonFieldItem.value : '' )) }  
-
-                  </div>
-                  )
-                )
-              
-            } 
-          </div>
-        </div>
   );
 }
 
