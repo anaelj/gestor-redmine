@@ -15,7 +15,7 @@ interface IDataChartBugImplementacao {
   qtDuvida?: number;
 }
 
-interface IDataChartBugInternoCliente {
+interface IDataChartBugOrigem {
   mes: string ;
   qtInterno?: number;
   qtCliente?: number;
@@ -71,7 +71,7 @@ function App() {
    const [issues, setIssues] = useState<Iissues[]>([]);
    const [dataChart, setDataChart] = useState<IDataChart[]>([]);
    const [dataChartBugImp, setDataChartBugImp] = useState<IDataChartBugImplementacao[]>([]);
-   const [dataChartBugInternoCliente, setDataChartBugInternoCliente] = useState<IDataChartBugInternoCliente[]>([]);
+   const [dataChartBugOrigem, setDataChartBugOrigem] = useState<IDataChartBugOrigem[]>([]);
 
   async function loadData (skip : number, itens : Iissues[] ): Promise<void> {
     const response = await api.get(`issues.json?status_id=*&limit=600&offset=${skip}&key=1927788238b0418601fd837aeabcdd9437042b4c`);        //&created_on=%3E%3C2020-01-01|2020-12-30
@@ -126,7 +126,7 @@ function App() {
 
      const arrayDataMonth : IDataChart[] = [];
      const arrayDataMonthImpBug : IDataChartBugImplementacao[] = [];
-     const arrayDataBugInternoCliente : IDataChartBugInternoCliente[] = [];
+     const arrayDataBugInternoCliente : IDataChartBugOrigem[] = [];
 
 //    console.log(newArray);
 
@@ -136,6 +136,7 @@ function App() {
 
      keys.map(itemKey => {
        arrayDataMonth.push({descricao: itemKey , quantidade: groupMonth[itemKey].length }); 
+       
        const groupTracker = groupBy(groupMonth[itemKey], "tracker_name" );
        const agrupamentoPorTipoDeAtemdimento = Object.keys( groupTracker );
 
@@ -153,11 +154,32 @@ function App() {
 
       const groupOrigemAtendimento = groupBy(groupMonth[itemKey], "origemAtendimento" );
       const agrupamentoOrigemAtendimento = Object.keys( groupOrigemAtendimento );
+      agrupamentoOrigemAtendimento.map(itemorigemAtendimento => { 
 
-      console.log(agrupamentoOrigemAtendimento);
+        if (itemorigemAtendimento === 'Cliente'){
+          updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento, qtCliente: groupOrigemAtendimento[itemorigemAtendimento].length  }); 
+        } else if (itemorigemAtendimento === 'Teste Interno'){
+          updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento , qtInterno: groupOrigemAtendimento[itemorigemAtendimento].length }); 
+        } 
+      })
+
+      });
 
 
-     })
+     function updateOrInsertIntoArrayOrigemAtendimento(array : IDataChartBugOrigem[] , item : IDataChartBugOrigem) { // (1)
+      const i = array.findIndex(_item => _item.mes === item.mes);
+      if (i > -1) {
+        if (item.qtCliente) {
+          array[i] = {mes: item.mes, qtCliente: array[i].qtCliente, qtInterno: item.qtInterno};
+        } else if (item.qtInterno){
+          array[i] = {mes: item.mes, qtCliente: item.qtCliente, qtInterno: array[i].qtInterno};
+        } 
+      } 
+      else { 
+        array.push(item);
+      }
+    }
+
 
      function updateOrInsertIntoArray(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { // (1)
       const i = array.findIndex(_item => _item.mes === item.mes);
@@ -178,7 +200,7 @@ function App() {
 
     setDataChart(arrayDataMonth);
     setDataChartBugImp(arrayDataMonthImpBug);
-//     setDataChartBugImp(arrayDataBugInternoCliente);
+    setDataChartBugOrigem(arrayDataBugInternoCliente);
 
      //     console.log(arrayDataMonth);
 
@@ -259,6 +281,16 @@ function App() {
       <Bar dataKey="qtImplementacao" fill="#0b8d2d " />
       <Bar dataKey="qtBug" fill="#e62200 " />
       <Bar dataKey="qtDuvida" fill="#4750d1 " />
+    </BarChart>
+    
+    <BarChart width={600} height={300} data={dataChartBugOrigem}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="mes" />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Bar dataKey="qtInterno" fill="#0b8d2d " />
+      <Bar dataKey="qtCliente" fill="#e62200 " />
     </BarChart>
   </div>
 
