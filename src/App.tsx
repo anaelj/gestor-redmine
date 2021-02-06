@@ -21,6 +21,12 @@ interface IDataChartBugOrigem {
   qtCliente?: number;
 }
 
+interface IDataChartModulo {
+  descricao: string ;
+  mes: string ;
+  qtIssues?: number;
+}
+
 interface ICustomFields {
     id: number;
     name: string;
@@ -58,6 +64,8 @@ interface Iissues {
   }
 
   origemAtendimento : string| undefined;
+  
+  modulo : string| undefined;
 
   custom_fields: ICustomFields[];
 
@@ -72,9 +80,10 @@ function App() {
    const [dataChart, setDataChart] = useState<IDataChart[]>([]);
    const [dataChartBugImp, setDataChartBugImp] = useState<IDataChartBugImplementacao[]>([]);
    const [dataChartBugOrigem, setDataChartBugOrigem] = useState<IDataChartBugOrigem[]>([]);
+   const [dataChartModulo, setDataChartModulo] = useState<IDataChartModulo[]>([]);
 
   async function loadData (skip : number, itens : Iissues[] ): Promise<void> {
-    const response = await api.get(`issues.json?status_id=*&limit=600&offset=${skip}&key=1927788238b0418601fd837aeabcdd9437042b4c`);        //&created_on=%3E%3C2020-01-01|2020-12-30
+    const response = await api.get(`issues.json?created_on=%3E%3C2020-01-01|2021-02-01&status_id=*&limit=6000&offset=${skip}&key=1927788238b0418601fd837aeabcdd9437042b4c&sort=created_on`);        //&created_on=%3E%3C2020-01-01|2020-12-30
     const newArray : Iissues[] = response.data.issues;
 
      setIssues([...itens, ...newArray]);
@@ -98,14 +107,15 @@ function App() {
       const newItem : Iissues = { ...item, 
         tracker_name : item.tracker.name,
         monthAndYear: new Date(item.created_on).getMonth()+1 +'/'+new Date(item.created_on).getFullYear(),
-        origemAtendimento: getCustomFieldValue('Origem',item.custom_fields)?.value
+        origemAtendimento: getCustomFieldValue('Origem',item.custom_fields)?.value, 
+        modulo: getCustomFieldValue('Módulo',item.custom_fields)?.value 
        };
 
         newArray.push(newItem);
          
     });
 
-    
+    console.log(newArray);
 
      const implementacao = 'Implementação';
      const correcaoBug = 'Correção de Bug';
@@ -119,7 +129,7 @@ function App() {
         } else {
           map[itemKey] = [item]
         }
-    
+   
         return map
       }, {})
     }
@@ -127,6 +137,7 @@ function App() {
      const arrayDataMonth : IDataChart[] = [];
      const arrayDataMonthImpBug : IDataChartBugImplementacao[] = [];
      const arrayDataBugInternoCliente : IDataChartBugOrigem[] = [];
+     const arrayDataModulo : IDataChartModulo[] = [];
 
 //    console.log(newArray);
 
@@ -151,20 +162,26 @@ function App() {
         } 
        })
 
+       const groupModulo = groupBy(groupMonth[itemKey], "tracker_name" );
+       const agrupamentoPorModulo = Object.keys( groupModulo );
+
+       agrupamentoPorModulo.map(itemModulo => { 
+
+          setDataChartModulo([...dataChartModulo, {mes: itemKey+'-'+itemTipoAtendimento, qtImplementacao: groupTracker[itemTipoAtendimento].length }])  
+
+       })
+
 
       const groupOrigemAtendimento = groupBy(groupMonth[itemKey], "origemAtendimento" );
       const agrupamentoOrigemAtendimento = Object.keys( groupOrigemAtendimento );
       agrupamentoOrigemAtendimento.map(itemorigemAtendimento => { 
-
-        if (itemorigemAtendimento === 'Cliente'){
-          updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento, qtCliente: groupOrigemAtendimento[itemorigemAtendimento].length  }); 
-        } else if (itemorigemAtendimento === 'Teste Interno'){
-          updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento , qtInterno: groupOrigemAtendimento[itemorigemAtendimento].length }); 
-        } 
-      })
-
+          if (itemorigemAtendimento === 'Cliente'){
+            updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento, qtCliente: groupOrigemAtendimento[itemorigemAtendimento].length  }); 
+          } else if (itemorigemAtendimento === 'Teste Interno'){
+            updateOrInsertIntoArrayOrigemAtendimento( arrayDataBugInternoCliente, {mes: itemKey+'-'+itemorigemAtendimento , qtInterno: groupOrigemAtendimento[itemorigemAtendimento].length }); 
+          } 
+        })
       });
-
 
      function updateOrInsertIntoArrayOrigemAtendimento(array : IDataChartBugOrigem[] , item : IDataChartBugOrigem) { // (1)
       const i = array.findIndex(_item => _item.mes === item.mes);
@@ -181,7 +198,7 @@ function App() {
     }
 
 
-     function updateOrInsertIntoArray(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { // (1)
+     function updateOrInsertIntoArray(array : IDataChartBugImplementacao[] , item : IDataChartBugImplementacao) { 
       const i = array.findIndex(_item => _item.mes === item.mes);
       if (i > -1) {
         if (item.qtBug) {
@@ -192,7 +209,7 @@ function App() {
           array[i] = {mes: item.mes, qtBug: array[i].qtBug, qtDuvida: item.qtDuvida,  qtImplementacao: array[i].qtImplementacao};
         }
         
-      } // (2)
+      } 
       else { 
         array.push(item);
       }
