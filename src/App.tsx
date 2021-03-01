@@ -165,11 +165,11 @@ function App() {
        const groupModulo = groupBy(groupMonth[itemKey], "tracker_name" );
        const agrupamentoPorModulo = Object.keys( groupModulo );
 
-       agrupamentoPorModulo.map(itemModulo => { 
+      //  agrupamentoPorModulo.map(itemModulo => { 
 
-          setDataChartModulo([...dataChartModulo, {mes: itemKey+'-'+itemTipoAtendimento, qtImplementacao: groupTracker[itemTipoAtendimento].length }])  
+      //     setDataChartModulo([...dataChartModulo, {mes: itemKey+'-'+itemModulo, qtIssues: groupTracker[itemModulo].length }])  
 
-       })
+      //  })
 
 
       const groupOrigemAtendimento = groupBy(groupMonth[itemKey], "origemAtendimento" );
